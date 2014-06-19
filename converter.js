@@ -116,6 +116,7 @@ Ext.application({
 				sfx = 'and ' + value.slice(-2) + '/100';
 
 				value = value.slice(0, -3);
+				value = value == ''? '0': value;
 			} else {
 				sfx = 'and 00/100';
 			}
