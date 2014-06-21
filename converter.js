@@ -36,7 +36,7 @@ Ext.application({
 			html: '<b>Number Converter</b><BR><BR>Accepts numbers between 0 and 999,999,999,999.99.<BR>Conversion occurs when button is clicked or Enter pressed in the entry field.<BR>Dollar signs, comma separators, and decimal point is optional.<BR>If there is a decimal point present, 2 digits must be to the right of it....in order for it to make cents.'
 		});
 
-        var btn = Ext.create('Ext.Button', {
+        var btn = this.convertBtn = Ext.create('Ext.Button', {
 			text: '<span style="font-size: medium;">Convert</span>',
 			margin: '5',
 			handler: Ext.bind(this.convert, this)
@@ -60,10 +60,14 @@ Ext.application({
 		});
 
 		var entryField = this.entryField = Ext.create('Ext.form.field.Text', {
-			anchor: '40%',
+			columnWidth: .4,
 			fieldLabel: '<b>Enter an amount to convert</b>',
 			labelAlign: 'top',
+			allowBlank: false,
+			blankText: 'Accepts numbers between 0 and 999,999,999,999.99.<BR>Dollar signs, comma separators, and decimal point is optional.<BR>If there is a decimal point present, 2 digits must be to the right of it....in order for it to make cents.',
 			enableKeyEvents: true,
+			regex: /^(\$|)(\d*)(\.\d{2})?$/,
+			regexText: 'Accepts numbers between 0 and 999,999,999,999.99.<BR>Dollar signs, comma separators, and decimal point is optional.<BR>If there is a decimal point present, 2 digits must be to the right of it....in order for it to make cents.',
 			listeners: {
 				keydown: {
 					fn: function(fld, evt) {
@@ -74,7 +78,21 @@ Ext.application({
 			}
 		});
 
-        var mainPanel = Ext.create('Ext.Panel', {
+		var errField = this.errField = Ext.create('Ext.form.field.Display', {
+			columnWidth: .6,
+			margin: '20 0 0 10',
+			hidden: true,
+			value: '<span style="color: red;">Invalid Entry!</span>',
+		});
+
+		var entryPanel = Ext.create('Ext.Panel', {
+			layout: 'column',
+			anchor: '100%',
+			border: false,
+			items: [entryField, errField]
+		});
+
+        var mainPanel = this.mainPanel = Ext.create('Ext.form.Panel', {
             renderTo     : Ext.getBody(),
             draggable: false,
             bodyPadding  : 25,
@@ -84,42 +102,36 @@ Ext.application({
 				type: 'anchor',
 			},
 			defaults: {margin: '0 0 0 20'},
-			items: [introPanel, entryField, btnContainer, displayField]
+			items: [introPanel, entryPanel, btnContainer, displayField]
         });
     },
 
     convert: function() {
+		var form = this.mainPanel.getForm();
 		var value = this.entryField.value;
 		var sfx, v, bil, mil, k, h;
 
-		this.result = [];
-		this.displayField.setValue('');
-
-		if (Ext.isEmpty(value)) {
-			this.displayField.setValue('Invalid Input');
-
+		if (!form.isValid()) {
+			this.errField.show();
 			return;
 		}
+
+		this.errField.hide();
+		this.result = [];
+		this.displayField.setValue('');
 
 		var testExp = /^(\$|)(\d*)(\.\d{2})?$/;
 		value = value.replace(/[\,\$]/g, '');
 
 		if (testExp.test(value)) {
-			//Allowing a max of 999,999,999,999.99;
-			if (value > 999999999999.99) {
-				this.displayField.setValue('Invalid Input');
-
-				return;
-			}
-
 			if (value.indexOf('.') > -1) {
 				sfx = 'and ' + value.slice(-2) + '/100';
 
 				value = value.slice(0, -3);
-				value = value == ''? '0': value;
 			} else {
 				sfx = 'and 00/100';
 			}
+			value = value == ''? '0': value;
 
 			if (value.length == 1) {
 				if (value == '0') {
@@ -144,8 +156,6 @@ Ext.application({
 
 				this.displayField.setValue(this.result.join(' ').replace(/- /g, '-'));
 			}
-		} else {
-			this.displayField.setValue('Invalid Input');
 		}
 	},
 
