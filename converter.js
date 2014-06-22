@@ -66,8 +66,6 @@ Ext.application({
 			allowBlank: false,
 			blankText: 'Accepts numbers between 0 and 999,999,999,999.99.<BR>Dollar signs, comma separators, and decimal point is optional.<BR>If there is a decimal point present, 2 digits must be to the right of it....in order for it to make cents.',
 			enableKeyEvents: true,
-			regex: /^(\$|)(\d*)(\.\d{2})?$/,
-			regexText: 'Accepts numbers between 0 and 999,999,999,999.99.<BR>Dollar signs, comma separators, and decimal point is optional.<BR>If there is a decimal point present, 2 digits must be to the right of it....in order for it to make cents.',
 			listeners: {
 				keydown: {
 					fn: function(fld, evt) {
@@ -110,8 +108,10 @@ Ext.application({
 		var form = this.mainPanel.getForm();
 		var value = this.entryField.value;
 		var sfx, v, bil, mil, k, h;
+		var testExp = /^(\$|)(\d*)(\.\d{2})?$/;
 
-		if (!form.isValid()) {
+		value = value.replace(/[\,\$]/g, '');
+		if (!form.isValid() || Math.abs(value) > 999999999999.99 || !testExp.test(value)) {
 			this.errField.show();
 			return;
 		}
@@ -120,42 +120,37 @@ Ext.application({
 		this.result = [];
 		this.displayField.setValue('');
 
-		var testExp = /^(\$|)(\d*)(\.\d{2})?$/;
-		value = value.replace(/[\,\$]/g, '');
+		if (value.indexOf('.') > -1) {
+			sfx = 'and ' + value.slice(-2) + '/100';
 
-		if (testExp.test(value)) {
-			if (value.indexOf('.') > -1) {
-				sfx = 'and ' + value.slice(-2) + '/100';
+			value = value.slice(0, -3);
+		} else {
+			sfx = 'and 00/100';
+		}
+		value = value == ''? '0': value;
 
-				value = value.slice(0, -3);
+		if (value.length == 1) {
+			if (value == '0') {
+				this.displayField.setValue('Zero ' + sfx);
 			} else {
-				sfx = 'and 00/100';
+				this.displayField.setValue(this.NUMBERS.ONES[value] + ' ' + sfx);
 			}
-			value = value == ''? '0': value;
+		} else {
+			v = value.split('').reverse();
 
-			if (value.length == 1) {
-				if (value == '0') {
-					this.displayField.setValue('Zero ' + sfx);
-				} else {
-					this.displayField.setValue(this.NUMBERS.ONES[value] + ' ' + sfx);
-				}
-			} else {
-				v = value.split('').reverse();
+			bil = Ext.Array.slice(v, 9, 12).length > 0? Ext.Array.slice(v, 9, 12): false;
+			mil = Ext.Array.slice(v, 6, 9).length > 0? Ext.Array.slice(v, 6, 9): false;
+			k = Ext.Array.slice(v, 3, 6).length > 0? Ext.Array.slice(v, 3, 6): false;
+			h = Ext.Array.slice(v, 0, 3).length > 0? Ext.Array.slice(v, 0, 3): false;
 
-				bil = Ext.Array.slice(v, 9, 12).length > 0? Ext.Array.slice(v, 9, 12): false;
-				mil = Ext.Array.slice(v, 6, 9).length > 0? Ext.Array.slice(v, 6, 9): false;
-				k = Ext.Array.slice(v, 3, 6).length > 0? Ext.Array.slice(v, 3, 6): false;
-				h = Ext.Array.slice(v, 0, 3).length > 0? Ext.Array.slice(v, 0, 3): false;
+			Ext.Array.insert(this.result, 0, this.renderText(h, null));
+			if (k) Ext.Array.insert(this.result, 0, this.renderText(k, 'Thousand'));
+			if (mil) Ext.Array.insert(this.result, 0, this.renderText(mil, 'Million'));
+			if (bil) Ext.Array.insert(this.result, 0, this.renderText(bil, 'Billion'));
 
-				Ext.Array.insert(this.result, 0, this.renderText(h, null));
-				if (k) Ext.Array.insert(this.result, 0, this.renderText(k, 'Thousand'));
-				if (mil) Ext.Array.insert(this.result, 0, this.renderText(mil, 'Million'));
-				if (bil) Ext.Array.insert(this.result, 0, this.renderText(bil, 'Billion'));
+			this.result.push(sfx);
 
-				this.result.push(sfx);
-
-				this.displayField.setValue(this.result.join(' ').replace(/- /g, '-'));
-			}
+			this.displayField.setValue(this.result.join(' ').replace(/- /g, '-'));
 		}
 	},
 
